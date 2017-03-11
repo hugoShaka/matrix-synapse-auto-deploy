@@ -18,15 +18,15 @@
 
     - name: Install requirements into a venv
       pip:
-        name: "{{ item }}"
+        name: "{{item}}"
         virtualenv: "/home/{{ username }}/.synapse"
         virtualenv_python: python2.7
-        with_items:
-          - cryptography
-          - pyasn1_modules
-          - characteristic
-          - simplejson
-          - canonicaljson
+      with_items:
+        - cryptography
+        - pyasn1_modules
+        - characteristic
+        - simplejson
+        - canonicaljson
 
     - name: PIP to install synapse from Git Repo into virtualenv
       pip:
