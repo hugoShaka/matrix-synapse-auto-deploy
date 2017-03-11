@@ -16,35 +16,44 @@
     - name: Create synapse user
       user: "name={{ username }} shell=/bin/bash comment='{{ username }}'"
 
-    - name: Create virtualenv
-      command: virtualenv -p python2.7 ~/.synapse
-      args:
-        chdir: "/home/{{ username }}"
-        creates: "/home/{{ username }}/.synapse/"
-
-    - name: PIP to upgrade setup tools
-      pip: "name=setuptools virtualenv=/home/{{ username }}/.synapse extra_args='--upgrade'"
-
-    - name: PIP to install needed dependencies into virtualenv
-      pip: "name={{ item }} virtualenv=/home/{{ username }}/.synapse"
-      with_items:
-       - cryptography
-       - pyasn1_modules
-       - characteristic
-       - simplejson
-       - canonicaljson
+    - name: Install requirements into a venv
+      pip:
+        name: {{ item }}
+        with_items:
+          - cryptography
+          - pyasn1_modules
+          - characteristic
+          - simplejson
+          - canonicaljson
+        virtualenv: /home/{{ username }}/.synapse
+        virtualenv_python: python2.7
 
     - name: PIP to install synapse from Git Repo into virtualenv
-      pip: "name={{ git_repo }} virtualenv=/home/{{ username }}/.synapse"
+      pip:
+        name: "{{ git_repo }}"
+        virtualenv: "/home/{{ username }}/.synapse"
 
     - name: PIP rollback to ldap3 v1.4 (hotfix)
-      pip: name="ldap3==1.4" virtualenv="/home/{{ username }}/.synapse"
+      pip:
+        name: "ldap3==1.4"
+        virtualenv: "/home/{{ username }}/.synapse"
 
-    - name: Generate homeserver.yaml config file
+    - name: Detecting previous install
+      stat: path="/home/{{ username }}/.synapse/homeserver.yaml"
+      register: previous_configfile
+
+    - name: Detecting the homeserver name of the previous install
+      command: grep "server_name" homeserver.yaml | cut -d "\"" -f2
+      args:
+        chdir: "/home/{{ username }}/.synapse/"
+      register: previous_homeserver_name
+      when: previous_configfile.stat.exists
+
+    - name: Generate homeserver.yaml config file and dummy certs
       shell: ". bin/activate && python -m synapse.app.homeserver --server-name {{ hostname }} --config-path homeserver.yaml --generate-config --report-stats=yes"
       args:
         chdir: "/home/{{ username }}/.synapse/"
-        creates: "/home/{{ username }}/.synapse/homeserver.yaml"
+      when: "(not previous_config_file.stat.exists) or previous_homeserver_name != {{ hostname }}"
 
     - name: Configure if registrations are enabled by default or not
       lineinfile: "dest=/home/{{ username }}/.synapse/homeserver.yaml"
@@ -113,12 +122,14 @@
 
     - name: Install systemd conf
       template:
-          src: etc/systemd/system/synapse.service.j2
-          dest: /etc/systemd/system/synapse.service
-          mode: 0644
+        src: etc/systemd/system/synapse.service.j2
+        dest: /etc/systemd/system/synapse.service
+        mode: 0644
+      register: synapse_daemon
 
     - name: Reloading Daemons
       command: systemctl daemon-reload
+      when: synapse_daemon.changed
 
     - name: Enabling service
       service:
