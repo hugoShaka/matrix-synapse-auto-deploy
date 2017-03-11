@@ -59,7 +59,7 @@
       shell: ". bin/activate && python -m synapse.app.homeserver --server-name {{ hostname }} --config-path homeserver.yaml --generate-config --report-stats=yes"
       args:
         chdir: "/home/{{ username }}/.synapse/"
-      when: "(not previous_config_file.stat.exists) or previous_homeserver_name != {{ hostname }}"
+      when: "(not previous_configfile.stat.exists) or previous_homeserver_name != {{ hostname }}"
 
     - name: Configure if registrations are enabled by default or not
       lineinfile: "dest=/home/{{ username }}/.synapse/homeserver.yaml"
