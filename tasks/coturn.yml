@@ -10,12 +10,17 @@
        - libsqlite3-dev
 
     - name: Clone coturn from github
-      git: repo=https://github.com/coturn/coturn.git dest=/usr/src/coturn
+      git:
+        repo: https://github.com/coturn/coturn.git
+        dest: /usr/src/coturn
+        force: yes
+      register: coturn
 
     - name: Compile and install coturn
       command: "./configure && make && make install"
       args:
         chdir: /usr/src/coturn
+      when: coturn.changed
 
     - name: Install turnserver config
       template:
@@ -30,6 +35,7 @@
 
     - name: Reload daemons
       command: systemctl daemon-reload
+      when: coturn.changed
 
     - name: Enable turn server
       service:
