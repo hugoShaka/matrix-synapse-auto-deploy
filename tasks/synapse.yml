@@ -16,11 +16,17 @@
     - name: Create synapse user
       user: "name={{ username }} shell=/bin/bash comment='{{ username }}'"
 
-    - name: Install requirements into a venv
+    - name: Creating venv and PIP to upgrade setup tools
+      pip: 
+        name: setuptools
+        virtualenv: "/home/{{ username }}/.synapse"
+        virtualenv_python: python2.7
+        extra_args: '--upgrade'
+
+    - name: Install requirements into the venv
       pip:
         name: "{{item}}"
         virtualenv: "/home/{{ username }}/.synapse"
-        virtualenv_python: python2.7
       with_items:
         - cryptography
         - pyasn1_modules
