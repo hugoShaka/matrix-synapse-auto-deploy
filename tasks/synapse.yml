@@ -18,7 +18,7 @@
 
     - name: Install requirements into a venv
       pip:
-        name: {{ item }}
+        name: "{{ item }}"
         with_items:
           - cryptography
           - pyasn1_modules
